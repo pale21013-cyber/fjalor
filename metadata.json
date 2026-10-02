@@ -1,0 +1,6 @@
+{
+  "name": "Fjalor Shqip",
+  "description": "Fjalor modern i gjuhës shqipe me kërkim të shpejtë, fjalën e ditës, lojë dhe të preferuara.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

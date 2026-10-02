@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:initialKeyguardLayout="@layout/widget_fjalor"
+    android:initialLayout="@layout/widget_fjalor"
+    android:minWidth="180dp"
+    android:minHeight="110dp"
+    android:previewImage="@drawable/app_icon_fg_1790976838082"
+    android:resizeMode="horizontal|vertical"
+    android:updatePeriodMillis="86400000"
+    android:widgetCategory="home_screen" />
