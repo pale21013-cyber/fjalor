@@ -23,23 +23,27 @@ android {
   }
 
   signingConfigs {
-    create("debugConfig") {
-      storeFile = file("${rootDir}/debug.keystore")
-      storePassword = "android"
-      keyAlias = "androiddebugkey"
-      keyPassword = "android"
-    }
     create("release") {
       val keystorePath = System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks"
       val kFile = file(keystorePath)
+      val rootDebugKeystore = file("${rootDir}/debug.keystore")
+      val homeDebugKeystore = file("${System.getProperty("user.home")}/.android/debug.keystore")
+
       if (kFile.exists() && System.getenv("STORE_PASSWORD") != null) {
         storeFile = kFile
         storePassword = System.getenv("STORE_PASSWORD")
         keyAlias = System.getenv("KEY_ALIAS") ?: "upload"
         keyPassword = System.getenv("KEY_PASSWORD")
+      } else if (rootDebugKeystore.exists()) {
+        storeFile = rootDebugKeystore
+        storePassword = "android"
+        keyAlias = "androiddebugkey"
+        keyPassword = "android"
       } else {
-        // Fallback to debug keystore for CI builds
-        storeFile = file("${rootDir}/debug.keystore")
+        if (!homeDebugKeystore.exists()) {
+          homeDebugKeystore.parentFile?.mkdirs()
+        }
+        storeFile = homeDebugKeystore
         storePassword = "android"
         keyAlias = "androiddebugkey"
         keyPassword = "android"
@@ -54,7 +58,17 @@ android {
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
       signingConfig = signingConfigs.getByName("release")
     }
-    debug { signingConfig = signingConfigs.getByName("debugConfig") }
+    debug {
+      val rootDebugKeystore = file("${rootDir}/debug.keystore")
+      if (rootDebugKeystore.exists()) {
+        signingConfig = signingConfigs.create("customDebug") {
+          storeFile = rootDebugKeystore
+          storePassword = "android"
+          keyAlias = "androiddebugkey"
+          keyPassword = "android"
+        }
+      }
+    }
   }
   compileOptions {
     sourceCompatibility = JavaVersion.VERSION_11
@@ -67,15 +81,16 @@ android {
   testOptions { unitTests { isIncludeAndroidResources = true } }
   dependenciesInfo {
     includeInApk = false
-    includeInBundle = true
+    includeInBundle = false
   }
 }
 
-// Configure the Secrets Gradle Plugin to use .env and .env.example files
-// to match the convention used in Web projects.
+// Secrets Gradle Plugin configuration
 secrets {
-  propertiesFileName = ".env"
-  defaultPropertiesFileName = ".env.example"
+  propertiesFileName = "secrets.properties"
+  defaultPropertiesFileName = "local.defaults.properties"
+  ignoreList.add("keyToIgnore")
+  ignoreList.add("sdk.*")
   ignoreList.add("FIREBASE_APPCHECK_DEBUG_TOKEN")
 }
 
@@ -123,23 +138,20 @@ dependencies {
   implementation(libs.kotlinx.coroutines.android)
   implementation(libs.kotlinx.coroutines.core)
   implementation(libs.logging.interceptor)
-  implementation(libs.moshi.kotlin)
   implementation(libs.okhttp)
-  // implementation(libs.play.services.location)
-  implementation(libs.retrofit)
-  testImplementation(libs.androidx.compose.ui.test.junit4)
+
+  ksp(libs.androidx.room.compiler)
+
+  testImplementation(libs.junit)
+  testImplementation(libs.robolectric)
   testImplementation(libs.androidx.core)
   testImplementation(libs.androidx.junit)
-  testImplementation(libs.junit)
-  testImplementation(libs.kotlinx.coroutines.test)
-  testImplementation(libs.robolectric)
+
   androidTestImplementation(platform(libs.androidx.compose.bom))
-  androidTestImplementation(libs.androidx.compose.ui.test.junit4)
   androidTestImplementation(libs.androidx.espresso.core)
   androidTestImplementation(libs.androidx.junit)
-  androidTestImplementation(libs.androidx.runner)
+  androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+
   debugImplementation(libs.androidx.compose.ui.test.manifest)
   debugImplementation(libs.androidx.compose.ui.tooling)
-  "ksp"(libs.androidx.room.compiler)
-  "ksp"(libs.moshi.kotlin.codegen)
 }

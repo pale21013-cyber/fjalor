@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -13,7 +12,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -65,23 +66,17 @@ fun DefinitionList(
 
                 if (crossRefEnabled && slugsSet.isNotEmpty()) {
                     val annotated = remember(defText, slugsSet) {
-                        buildCrossRefString(defText, slugsSet)
+                        buildCrossRefString(defText, slugsSet, onWordClick)
                     }
 
-                    ClickableText(
+                    Text(
                         text = annotated,
                         style = MaterialTheme.typography.bodyLarge.copy(
                             color = MaterialTheme.colorScheme.onSurface,
                             lineHeight = 26.sp,
                             fontSize = 17.sp
                         ),
-                        modifier = Modifier.weight(1f),
-                        onClick = { offset ->
-                            annotated.getStringAnnotations(tag = "SLUG", start = offset, end = offset)
-                                .firstOrNull()?.let { annotation ->
-                                    onWordClick(annotation.item)
-                                }
-                        }
+                        modifier = Modifier.weight(1f)
                     )
                 } else {
                     Text(
@@ -99,7 +94,11 @@ fun DefinitionList(
     }
 }
 
-private fun buildCrossRefString(text: String, slugsSet: Set<String>): AnnotatedString {
+private fun buildCrossRefString(
+    text: String,
+    slugsSet: Set<String>,
+    onWordClick: (String) -> Unit
+): AnnotatedString {
     return buildAnnotatedString {
         val wordRegex = Regex("([a-zA-ZëËçÇ]+)|([^a-zA-ZëËçÇ]+)")
         val matches = wordRegex.findAll(text)
@@ -113,24 +112,22 @@ private fun buildCrossRefString(text: String, slugsSet: Set<String>): AnnotatedS
                 val matchedSlug = Slug.matchSlug(candidateSlug, slugsSet)
 
                 if (matchedSlug != null) {
-                    val start = length
-                    append(token)
-                    val end = length
-                    addStringAnnotation(
-                        tag = "SLUG",
-                        annotation = matchedSlug,
-                        start = start,
-                        end = end
-                    )
-                    addStyle(
-                        style = SpanStyle(
-                            color = androidx.compose.ui.graphics.Color(0xFFB31920),
-                            fontWeight = FontWeight.Medium,
-                            textDecoration = TextDecoration.Underline
+                    val link = LinkAnnotation.Clickable(
+                        tag = matchedSlug,
+                        styles = TextLinkStyles(
+                            style = SpanStyle(
+                                color = androidx.compose.ui.graphics.Color(0xFFB31920),
+                                fontWeight = FontWeight.Medium,
+                                textDecoration = TextDecoration.Underline
+                            )
                         ),
-                        start = start,
-                        end = end
+                        linkInteractionListener = {
+                            onWordClick(matchedSlug)
+                        }
                     )
+                    pushLink(link)
+                    append(token)
+                    pop()
                 } else {
                     append(token)
                 }
